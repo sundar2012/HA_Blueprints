@@ -1,0 +1,199 @@
+blueprint:
+  name: Philips Hue Tap Dial Audio + Light
+  description: Use the Philips Hue Tap Dial to control speakers and lights, volume and brightness.  Long press to toggle play/pause on/off.  Short press to select device for dial use.
+  domain: automation
+  input:
+    media_controller:
+      name: media player device for button 1
+      description: The media player for Button 1.  Long Press will play/pause.  Short press will allow you to control volume with the dial.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - media_player
+    light_button2:
+      name: Light for button 2
+      description: The light for Button 2.  Long Press will toggle the light.  Short press will allow you to control brightness with the dial.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - light
+    light_button3:
+      description: The light for Button 3.  Long Press will toggle the light.  Short press will allow you to control brightness with the dial.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - light
+    light_button4:
+      name: Light for button 4
+      description: The light for Button 4.  Long Press will toggle the light.  Short press will allow you to control brightness with the dial.
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - light
+    helper_input:
+      name: You will need to create an input_text helper for this blueprint.  Select it here.
+      description: x
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain:
+                - input_text
+variables:
+  controller: !input media_controller
+  light_button2: !input light_button2
+  light_button3: !input light_button3
+  light_button4: !input light_button4
+  helper_input: !input helper_input
+mode: parallel
+trigger:
+  - platform: event
+    event_type: hue_event
+condition: []
+action:
+  - variables:
+      action: "{{ trigger.event.data.type }}"
+      action_sub: "{{ trigger.event.data.subtype }}"
+      action_steps: "{{ trigger.event.data.steps }}"
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ action == 'short_release' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 1 }}"
+                sequence:
+                  - service: input_text.set_value
+                    metadata: {}
+                    data:
+                      value: !input media_controller
+                    target:
+                      entity_id: !input helper_input
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 2 }}"
+                sequence:
+                  - service: input_text.set_value
+                    metadata: {}
+                    data:
+                      value: !input light_button2
+                    target:
+                      entity_id: !input helper_input
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 3 }}"
+                sequence:
+                  - service: input_text.set_value
+                    metadata: {}
+                    data:
+                      value: !input light_button3
+                    target:
+                      entity_id: !input helper_input
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 4 }}"
+                sequence:
+                  - service: input_text.set_value
+                    metadata: {}
+                    data:
+                      value: !input light_button4
+                    target:
+                      entity_id: !input helper_input
+      - conditions:
+          - condition: template
+            value_template: "{{ action == 'long_press' }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 1 }}"
+                sequence:
+                  - service: media_player.media_play_pause
+                    metadata: {}
+                    target:
+                      entity_id: !input media_controller
+                    data: {}
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 2 }}"
+                sequence:
+                  - service: light.toggle
+                    metadata: {}
+                    target:
+                      entity_id: !input light_button2
+                    data: {}
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 3 }}"
+                sequence:
+                  - service: light.toggle
+                    metadata: {}
+                    target:
+                      entity_id: !input light_button3
+                    data: {}
+              - conditions:
+                  - condition: template
+                    value_template: "{{ action_sub == 4 }}"
+                sequence:
+                  - service: light.toggle
+                    metadata: {}
+                    target:
+                      entity_id: !input light_button4
+                    data: {}
+      - conditions:
+          - condition: template
+            value_template: "{{ action_sub == 'clock_wise' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ states(helper_input)[:5] == 'media'}}"
+            then:
+              - service: media_player.volume_set
+                metadata: {}
+                data:
+                  volume_level: >-
+                    {{state_attr(states(helper_input),
+                    'volume_level') + (trigger.event.data.steps / 1500)}}
+                target:
+                  entity_id: !input media_controller
+            else:
+              - service: light.turn_on
+                metadata: {}
+                data:
+                  brightness_step_pct: "{{ (trigger.event.data.steps / 1500)* 100 }}"
+                target:
+                  entity_id: "{{ states(helper_input) }}"
+      - conditions:
+          - condition: template
+            value_template: "{{ action_sub == 'counter_clock_wise' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ states(helper_input)[:5] == 'media'}}"
+            then:
+              - service: media_player.volume_set
+                metadata: {}
+                data:
+                  volume_level: >-
+                    {{state_attr(states(helper_input),
+                    'volume_level') - (trigger.event.data.steps / 1500)}}
+                target:
+                  entity_id: "{{ states(helper_input) }}"
+            else:
+              - service: light.turn_on
+                metadata: {}
+                data:
+                  brightness_step_pct: "{{ (trigger.event.data.steps / 1500)* -100 }}"
+                target:
+                  entity_id: "{{ states(helper_input) }}"
+max: 15
