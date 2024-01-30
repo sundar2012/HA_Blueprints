@@ -48,8 +48,8 @@ blueprint:
             - domain:
                 - light
     helper_input:
-      name: You will need to create an input_text helper for this blueprint.  Select it here.
-      description: x
+      name: helper input
+      description: You will need to create an input_text helper for this blueprint.  Select it here.
       selector:
         entity:
           multiple: false
