@@ -3,6 +3,15 @@ blueprint:
   description: Use the Philips Hue Tap Dial to control speakers and lights, volume and brightness.  Long press to toggle play/pause on/off.  Short press to select device for dial use.
   domain: automation
   input:
+    tap_dial:
+      name: Tap Dial
+      description: The tap dial to use.  just select the battery sensor that is exposed
+      selector:
+        entity:
+          multiple: false
+          filter:
+            - domain: sensor
+              integration: hue
     media_controller:
       name: media player device for button 1
       description: The media player for Button 1.  Long Press will play/pause.  Short press will allow you to control volume with the dial.
@@ -48,6 +57,7 @@ blueprint:
             - domain:
                 - input_text
 variables:
+  tap_dial_used: !input tap_dial
   controller: !input media_controller
   light_button2: !input light_button2
   light_button3: !input light_button3
@@ -57,7 +67,10 @@ mode: parallel
 trigger:
   - platform: event
     event_type: hue_event
-condition: []
+condition:
+  - condition: template
+    value_template: >-
+      {{trigger.event.data.device_id == device_id(tap_dial_used)}}
 action:
   - variables:
       action: "{{ trigger.event.data.type }}"
